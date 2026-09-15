@@ -11,6 +11,10 @@
 // more than the chain it mirrors). Every taxed response carries `rate_mode`
 // provenance: "parity" | "override" | "refused" (stale params = refused).
 import Tax "Tax";
+import Icrc "Icrc";
+import Result "mo:core/Result";
+import Nat64 "mo:core/Nat64";
+import Int "mo:core/Int";
 import Array "mo:core/Array";
 import VarArray "mo:core/VarArray";
 import Nat "mo:core/Nat";
@@ -44,6 +48,19 @@ persistent actor CKLunc {
   var ledgerLen : Nat = 0;
 
   var openEpochClosed : Bool = false;
+
+  // --- ICRC-1/2 ledger state (B1) -------------------------------------------
+  // Inline module (see Icrc.mo header for why). Persisted with the actor via
+  // orthogonal persistence; balances/supply survive upgrades.
+  var ledger : Icrc.State = Icrc.init();
+
+  func now64() : Nat64 {
+    Nat64.fromNat(Int.abs(Time.now()));
+  };
+
+  func callerAccount(caller : Principal, sub : ?Blob) : Icrc.Account {
+    { owner = caller; subaccount = sub };
+  };
 
   func growLedger(min : Nat) {
     if (min <= ledgerData.size()) { return };
@@ -175,7 +192,7 @@ persistent actor CKLunc {
   /// Execute a taxed burn: records `tax` into the burn ledger (CKLUNC burned),
   /// with net + tax = amount conserved exactly. The ICRC-2 pull and ledger
   /// credit wire in at B2; the burn accounting is production-complete now.
-  public func taxed_transfer(amount : Nat) : async { net : Nat; tax : Nat; burnEpoch : Nat; rate_mode : Text } {
+  public shared ({ caller }) func taxed_transfer(amount : Nat) : async { net : Nat; tax : Nat; burnEpoch : Nat; rate_mode : Text } {
     if (amount == 0) {
       // zero-value burns would only add noise entries to the settlement ledger
       return { net = 0; tax = 0; burnEpoch = 0; rate_mode = "refused" };
@@ -187,6 +204,19 @@ persistent actor CKLunc {
       };
       case (?(rate, mode)) {
         let (net, tax) = Tax.split(amount, rate);
+        if (tax > 0) {
+          // B1 execution model: the tax portion is burned straight from the
+          // caller's default-subaccount balance (net stays with the caller).
+          // The full ICRC-2 pull-then-transfer flow wires in at B2.
+          let sender = callerAccount(caller, null);
+          let bal = Icrc.balanceOf(ledger, sender);
+          if (bal < tax) {
+            Runtime.trap("insufficient CKLUNC balance for the burn tax");
+          };
+          Icrc.setBalance(ledger, sender, bal - tax);
+          ledger.totalSupply -= tax;
+          ledger.feeCollected += tax;
+        };
         let epoch = recordBurn(tax);
         totalTaxedVolume += amount;
         totalTaxBurned += tax;
@@ -251,6 +281,52 @@ persistent actor CKLunc {
       underlyingBurnedSettled;
       decimals = DECIMALS;
     };
+  };
+
+  // --- ICRC-1 standard surface (B1) ------------------------------------------
+  public query func icrc1_name() : async Text { "CKLUNC" };
+  public query func icrc1_symbol() : async Text { "CKLUNC" };
+  public query func icrc1_decimals() : async Nat8 { 6 };
+  public query func icrc1_fee() : async Nat { Icrc.FEE };
+  public query func icrc1_total_supply() : async Nat { ledger.totalSupply };
+  public query func icrc1_minting_account() : async ?Icrc.Account { ledger.mintingAccount };
+  public query func icrc1_balance_of(a : Icrc.Account) : async Nat { Icrc.balanceOf(ledger, a) };
+  public query func icrc1_supported_standards() : async [Icrc.SupportedStandard] {
+    [ { name = "ICRC-1"; url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-1" },
+      { name = "ICRC-2"; url = "https://github.com/dfinity/ICRC-1/tree/main/standards/ICRC-2" } ];
+  };
+
+  public shared ({ caller }) func icrc1_transfer(args : Icrc.TransferArgs) : async Result.Result<Nat, Icrc.TransferError> {
+    Icrc.applyTransfer(ledger, callerAccount(caller, args.from_subaccount), args, now64());
+  };
+
+  // --- ICRC-2 approve / transfer_from (B1) -----------------------------------
+  public shared ({ caller }) func icrc2_approve(args : Icrc.ApproveArgs) : async Result.Result<Nat, Icrc.ApproveError> {
+    Icrc.applyApprove(ledger, callerAccount(caller, args.from_subaccount), args, now64());
+  };
+
+  public shared ({ caller }) func icrc2_transfer_from(args : Icrc.TransferFromArgs) : async Result.Result<Nat, Icrc.TransferFromError> {
+    let spender = callerAccount(caller, args.spender_subaccount);
+    Icrc.applyTransferFrom(ledger, spender, args, now64());
+  };
+
+  public query func icrc2_allowance(a : { account : Icrc.Account; spender : Icrc.Account }) : async { allowance : Nat; expires_at : ?Nat64 } {
+    { allowance = Icrc.allowance(ledger, a.account, a.spender); expires_at = null };
+  };
+
+  // --- minter-privileged ledger operations (B2a bridge entry) ----------------
+  /// Mint CKLUNC against LUNC received into custody. Controller-gated; the
+  /// deposit-detection proof chain arrives at B3 (until then, controller trust).
+  public shared ({ caller }) func cklunc_mint(to : Icrc.Account, amount : Nat) : async Nat {
+    requireController(caller);
+    Icrc.applyMint(ledger, to, amount);
+  };
+
+  /// Configure the minting account (ICRC-1 burn target). Controller-gated.
+  public shared ({ caller }) func set_minting_account(acc : ?Icrc.Account) : async Bool {
+    requireController(caller);
+    ledger.mintingAccount := acc;
+    true;
   };
 
   // --- formatting helpers ---------------------------------------------------

@@ -1,9 +1,15 @@
-# ckLUNC — Terra Classic governance proposal (DRAFT SKELETON)
+# ckLUNC — Terra Classic governance proposal (DORMANT)
 
-> **Status: draft — do not post yet.** Scope is locked by our own honesty rules:
-> this proposal asks for **roadmap funding (B1→B2b)** with **B0 as proof of
-> execution**. It never claims ckLUNC is live, audited, or deployable on mainnet.
-> Placeholders marked `[TBD]` must be filled with verified data before posting.
+> **Status: dormant — an optional later endorsement path, not a build gate.**
+> ckLUNC needs no LUNC governance approval to build, deploy, or run on testnet
+> (and eventually mainnet): chain-key custody reads and writes the public
+> Terra Classic ledger, and to the chain the ICP minter is just another wallet
+> (the ckBTC / ckERC-20 pattern — no source-chain permission required; Cosmos
+> chains all sign with secp256k1, which ICP threshold ECDSA covers). This file
+> is kept for two *future* asks only: the narrow taxexemption-list proposal
+> (§6) and an optional canonical-twin endorsement. When revived: never claim
+> ckLUNC is live, audited, or mainnet-deployable without evidence, and fill
+> every `[TBD]` with verified data before posting.
 
 **Suggested on-chain title:**
 *ckLUNC: fund the ICP chain-key twin (B1→B2b) — additive LUNC utility, locked supply, dual-chain burns*
@@ -28,6 +34,11 @@ chain throughput cannot host. ckLUNC carries LUNC *into* that execution lane.
 Nothing on Terra Classic changes: no fork, no module, no new token issuance.
 ckLUNC is purely additive — a second place where LUNC can be used, from which
 value flows back as burns.
+
+For scale: LUNC circulates at a ≈$275M market cap (CMC/CoinGecko, Sep 2026) —
+top-3/5 within the Cosmos ecosystem — a base large enough that even
+single-digit-percentage adoption of idle supply meaningfully grows locked
+supply and burns.
 
 ### 1.2 Supply: locked while bridged, burned as it is used
 
@@ -90,13 +101,17 @@ the same burn LUNC legs pay, and that burn lands on Terra Classic.
 - ckLUNC is a **unit** twin of LUNC: its value is LUNC's value. No peg claims,
   no stablecoin language, no yield promises — by design and by policy.
 
-## 3. What exists today (proof of execution — B0)
+## 3. What exists today (proof of execution — B0+B1)
 
 - Tax-parity core: exact integer Dec math, floored tax, `net + tax = amount`
   conservation on arbitrarily large amounts; sanity bounds; rate-override
   policy (lower-only, fail-closed).
 - Minter core skeleton: controller-gated params feed, taxed transfer +
   preview with provenance, burn-epoch ledger, settlement hook, stats.
+- ICRC-1/2 ledger (B1): transfers with burn-to-minting-account semantics,
+  ICRC-2 approve / transfer_from (CAS + revoke), controller-gated mint, flat
+  fee burned outright, and the asserted invariant
+  `sum(all balances) == totalSupply` after every operation.
 - Test suite green in CI (public); all code MIT, published at
   `github.com/Semence2Porc/cklunc`.
 
