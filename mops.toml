@@ -5,5 +5,9 @@ version = "0.1.0"
 [dependencies]
 core = "2.0.0"
 
+[toolchain]
+moc = "1.0.0"
+wasmtime = "35.0.0"
+
 [canisters.backend]
 main = "src/backend/main.mo"
