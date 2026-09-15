@@ -44,18 +44,33 @@ Two distinct mechanisms, stated separately so nobody conflates them:
   usage volume becomes a **new, non-inflationary burn engine** aligned with
   this community's core supply-reduction goal.
 
-### 1.3 The two lock-up economies (and a correction we owe you)
+### 1.3 The headline utility: CKLUNC is the staking asset of a new economy
 
-ICP's growth engine is lock-up: the NNS stakes **ICP** (not LUNC) in neurons
-with dissolve delays, and SNS DAOs lock value the same way — the ecosystem is
-economically *designed around* locking. Bridging LUNC into ICP plugs idle LUNC
-into an economy that rewards locking, and future ckLUNC-side primitives
-(governance of the minter via SNS, LP programs on ICP DEXs) would lock CKLUNC
-supply further — each locked CKLUNC is LUNC locked in custody. Terra Classic's
-own staking is untouched: **ckLUNC targets the LUNC that sits idle** (in
-wallets and on exchanges — `[TBD: verify current % staked vs idle before
-posting]`), not the staked portion, so it does not cannibalize LUNC
-governance participation.
+The NNS stakes ICP — that is ICP's economy, and it can keep its ICP treasury.
+The point for Terra Classic is different and bigger: **CKLUNC itself becomes
+the money you stake for proposals.** Today, LUNC is stakeable only on Terra
+Classic (bonded for chain governance). As CKLUNC it becomes additionally
+stakeable on ICP in neuron-style locks (amount × dissolve-delay voting power)
+to govern the ckLUNC protocol itself: minter parameters — the burn-rate
+override within its strictly-below-mirrored bound, the params-feed quorum,
+treasury spends of accumulated fees — with the governance canister replacing
+the deployer as minter controller at decentralization (post-roadmap B6).
+
+Two safety properties make this a sound stake:
+
+- **Bounded governance.** The minter enforces the rate bounds *locally*: a
+  vote cannot set the ICP rate above the mirrored LUNC rate or outside sanity
+  bounds, because the contract itself rejects it. Governance steers within a
+  safe envelope; it cannot break the tax-parity invariant.
+- **Staking locks, it does not burn.** Staked CKLUNC keeps its underlying
+  LUNC in custody for the neuron duration — locked supply (§1.2), reversible,
+  never marketed as a burn. Voting power only; no yield is promised.
+
+Boundary, stated plainly: ckLUNC governance governs the ckLUNC protocol. It
+does not and cannot vote in Terra Classic's own chain governance — ckLUNC
+**targets the LUNC that sits idle** (in wallets and on exchanges — `[TBD:
+verify current % staked vs idle before posting]`), so it does not cannibalize
+LUNC governance participation; it gives idle LUNC a second economic life.
 
 ### 1.4 Why tax parity matters to *this* community
 
@@ -99,6 +114,10 @@ the same burn LUNC legs pay, and that burn lands on Terra Classic.
 **Budget: `[TBD]` LUNC** from the community pool, released per milestone with
 public acceptance evidence. Alternative if the community prefers: a zero-budget
 endorsement proposal now, funding proposal after B1 ships.
+
+**Beyond this ask:** the governance canister (B6 — CKLUNC neuron staking, the
+§1.3 utility) is deliberately outside the funding table; it builds on B2b's
+controller model and is a candidate follow-up proposal once B1–B2b deliver.
 
 ## 5. What we explicitly do NOT claim
 
