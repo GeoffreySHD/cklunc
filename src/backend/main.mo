@@ -176,6 +176,10 @@ persistent actor CKLunc {
   /// with net + tax = amount conserved exactly. The ICRC-2 pull and ledger
   /// credit wire in at B2; the burn accounting is production-complete now.
   public func taxed_transfer(amount : Nat) : async { net : Nat; tax : Nat; burnEpoch : Nat; rate_mode : Text } {
+    if (amount == 0) {
+      // zero-value burns would only add noise entries to the settlement ledger
+      return { net = 0; tax = 0; burnEpoch = 0; rate_mode = "refused" };
+    };
     switch (effectiveRateNow()) {
       case null {
         // fail-closed: no execution on stale params
