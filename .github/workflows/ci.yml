@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dfinity/setup-mops@v1
+
+      - name: Unit tests (mops)
+        run: mops test
+
+      - name: Build canisters
+        run: mops build

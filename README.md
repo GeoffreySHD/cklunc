@@ -1,5 +1,7 @@
 # CKLUNC — chain-key LUNC on the Internet Computer (in development)
 
+[![CI](https://github.com/Semence2Porc/cklunc/actions/workflows/ci.yml/badge.svg)](https://github.com/Semence2Porc/cklunc/actions/workflows/ci.yml)
+
 An ICRC-1/ICRC-2 twin of LUNC backed 1:1 by LUNC in minter custody, with
 **dynamic tax parity**: LUNC's burn-tax parameters are mirrored live from the
 chain (fail-closed on staleness), and taxed transfers burn on both chains.
