@@ -1,0 +1,9 @@
+[package]
+name = "cklunc"
+version = "0.1.0"
+
+[dependencies]
+core = "2.0.0"
+
+[canisters.backend]
+main = "src/backend/main.mo"
