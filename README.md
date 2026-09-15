@@ -85,3 +85,30 @@ mops test && mops build   # green in WSL with mops 2.19.2, core 2.0.0
    operations loudly; nothing executes on stale data.
 4. **Tax neutrality of the bridge:** the LUNC leg pays LUNC's tax natively;
    CKLUNC legs pay via `taxed_transfer` — never both.
+
+## Bridge tax mechanics (B2b/B3 design input, verified against core v4)
+
+From `core/custom/auth/ante/fee_tax.go`: the burn tax applies to `MsgSend`,
+`MsgMultiSend`, `MsgSwapSend`, and contract execute/instantiate funds — checked
+against the `x/taxexemption` address-pair list. Two consequences:
+
+- **IBC transfers (`MsgTransfer`) are not in the taxed message set at all** —
+  IBC bridging out of LUNC pays no burn tax. (Not our rail, but good to know.)
+- **Our bridge's LUNC legs ARE plain `MsgSends`** — deposits to the minter and
+  burn-settlement sends are taxed unless the (minter, counterparty) pairs get a
+  governance exemption. The README invariant above forbids double taxation, and
+  the chain has already ruled this way once: the fee_tax.go comment records that
+  contract-message taxation was changed *to remove double-taxation*. The
+  minter is the ICP analog of that fix — the exemption ask (or explicit
+  gross-up accounting as the fallback) must be a prepared governance item
+  before mainnet custody, not an afterthought.
+- **Burn-settlement sends** (Phase 2: freed LUNC → dead address) are also
+  MsgSends; if not exempted, burning X costs X + X×rate. Prefer the exemption;
+  otherwise the epoch math needs a tax buffer.
+
+No rate-level risk exists in the override: backing is 1:1 at ANY rate in
+[0, mirrored] — `held − (settled + pending) ≥ supply` holds regardless of how
+small the ICP-side tax is. A lower override means less burn contribution, not
+insolvency. The dangerous direction (charging MORE than the mirrored chain,
+releasing less LUNC than burned CKLUNC) is structurally blocked by
+`override < mirrored`.
